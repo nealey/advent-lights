@@ -1,0 +1,122 @@
+#include <FastLED.h>
+
+#ifdef __AVR_ATtiny85__
+#include <EEPROM.h>
+#define LED_BUILTIN 1
+#define FLASH_EEPROM false
+#else
+#include <FlashAsEEPROM.h>
+#define FLASH_EEPROM true
+#endif
+
+//#define DEBUG
+
+// Which pins your NeoPixels are connected to
+#define LEDS_PIN 4
+
+// How many LEDS you have. 24 for xmas advent, 9 for menorah, etc.
+#define NUM_LEDS 24
+
+// Want one of them to be white?
+#define THE_WHITE_ONE 23
+
+// How many milliseconds between twinkling
+#define DELAY_MS 1000
+
+// What percentage chance a chosen light has of being on
+#define ACTIVITY 20
+
+// Where to write the next value
+#define STORAGE_SLOT 25
+
+#define STAR_COLOR CHSV(24, 150, 255)
+
+// These colors mirror pretty closely some cheapo LED lights we have
+const uint32_t colors[] = {
+    0xdd4400,  // Yellow
+    0xff0000,  // Red
+    0xdd2200,  // Amber
+    0x004400,  // Green
+
+    0xdd4400,  // Yellow
+    0xff0000,  // Red
+    0xdd2200,  // Amber
+    0x880044,  // Purple
+
+    0xdd4400,  // Yellow
+    0xff0000,  // Red
+    0xdd2200,  // Amber
+    0x000088,  // Blue
+};
+const int ncolors = sizeof(colors) / sizeof(*colors);
+
+CRGB leds[NUM_LEDS];
+int lastLightOn;
+
+void setup() {
+  FastLED.addLeds<WS2812B, LEDS_PIN, RGB>(leds, NUM_LEDS);
+  FastLED.setBrightness(128);
+
+  pinMode(LED_BUILTIN, OUTPUT);
+
+#if defined(DEBUG)
+  lastLightOn = NUM_LEDS - 1;
+#elif defined(FLASH_AS_EEPROM_h)
+  if (EEPROM.isValid()) {
+    lastLightOn = EEPROM.read(STORAGE_SLOT);
+  } else {
+    lastLightOn = 0;
+  }
+  EEPROM.update(STORAGE_SLOT, (lastLightOn + 1) % NUM_LEDS);
+  EEPROM.commit();
+#else
+  lastLightOn = EEPROM.read(STORAGE_SLOT);
+  EEPROM.update(STORAGE_SLOT, (lastLightOn + 1) % NUM_LEDS);
+#endif
+}
+
+bool strandUpdate() {
+  static unsigned long nextEventMillis = 0;
+  unsigned long now = millis();
+  static int group = 0;
+
+  if (now < nextEventMillis) {
+    return false;
+  }
+
+  int twinkler = random(lastLightOn + 1);
+  // Make sure it's got the right things on and off
+  for (int pos = 0; pos < NUM_LEDS; ++pos) {
+    uint32_t color =  colors[random(ncolors)];
+    if (pos <= lastLightOn) {
+      if (pos == THE_WHITE_ONE) {
+        leds[pos] = STAR_COLOR;
+      } else if ((pos == twinkler) || !(leds[pos])) {
+        leds[pos] = color;
+        if ((random(100) > ACTIVITY) && (pos != lastLightOn)) {
+          leds[pos].fadeLightBy(180);
+        }
+      }
+    } else {
+      leds[pos] = 0;
+    }
+  }
+  nextEventMillis = now + DELAY_MS;
+  return true;
+}
+
+void loop() {
+  bool update = false;
+
+  update |= strandUpdate();
+
+  if (update) {
+    FastLED.show();
+  }
+
+  // blink the heart for a little bit
+  if (millis() < 8 * 1000) {
+    bool on = (millis() % 1000) < 500;
+    digitalWrite(LED_BUILTIN, on);
+  }
+}
