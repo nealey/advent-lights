@@ -9,10 +9,10 @@
 #define FLASH_EEPROM true
 #endif
 
-//#define DEBUG
+#define DEBUG
 
 // Which pins your NeoPixels are connected to
-#define LEDS_PIN 4
+#define LEDS_PIN 2
 
 // How many LEDS you have. 24 for xmas advent, 9 for menorah, etc.
 #define NUM_LEDS 24
@@ -31,31 +31,29 @@
 
 #define STAR_COLOR CHSV(24, 150, 255)
 
-// These colors mirror pretty closely some cheapo LED lights we have
-const uint32_t colors[] = {
-    0xdd4400,  // Yellow
-    0xff0000,  // Red
-    0xdd2200,  // Amber
-    0x004400,  // Green
-
-    0xdd4400,  // Yellow
-    0xff0000,  // Red
-    0xdd2200,  // Amber
-    0x880044,  // Purple
-
-    0xdd4400,  // Yellow
-    0xff0000,  // Red
-    0xdd2200,  // Amber
-    0x000088,  // Blue
-};
-const int ncolors = sizeof(colors) / sizeof(*colors);
+uint8_t RandomHue() {
+  switch (random(12)) {
+    case 0 ... 2:
+      return 52; // reddish yellow
+    case 3 ... 5:
+      return HUE_RED;
+    case 6 ... 8:
+      return 28; // reddish orange
+    case 9:
+      return HUE_BLUE;
+    case 10:
+      return HUE_GREEN;
+    case 11:
+      return 204; // reddish purple
+  }
+}
 
 CRGB leds[NUM_LEDS];
 int lastLightOn;
 
 void setup() {
   FastLED.addLeds<WS2812B, LEDS_PIN, RGB>(leds, NUM_LEDS);
-  FastLED.setBrightness(128);
+  FastLED.setBrightness(64);
 
   pinMode(LED_BUILTIN, OUTPUT);
 
@@ -87,15 +85,18 @@ bool strandUpdate() {
   int twinkler = random(lastLightOn + 1);
   // Make sure it's got the right things on and off
   for (int pos = 0; pos < NUM_LEDS; ++pos) {
-    uint32_t color =  colors[random(ncolors)];
+    uint8_t hue = RandomHue();
+    uint8_t saturation = 255;
+    uint8_t value = 255;
     if (pos <= lastLightOn) {
       if (pos == THE_WHITE_ONE) {
-        leds[pos] = STAR_COLOR;
-      } else if ((pos == twinkler) || !(leds[pos])) {
-        leds[pos] = color;
+        saturation = 30;
+      } 
+      if ((pos == twinkler) || !(leds[pos])) {
         if ((random(100) > ACTIVITY) && (pos != lastLightOn)) {
-          leds[pos].fadeLightBy(180);
+          value = 100;
         }
+        leds[pos] = CHSV(hue, saturation, value);
       }
     } else {
       leds[pos] = 0;
