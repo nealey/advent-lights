@@ -9,7 +9,7 @@
 #define FLASH_EEPROM true
 #endif
 
-#define DEBUG
+//#define DEBUG
 
 // Which pins your NeoPixels are connected to
 #define LEDS_PIN 2
