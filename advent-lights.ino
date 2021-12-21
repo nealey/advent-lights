@@ -9,16 +9,23 @@
 #define FLASH_EEPROM true
 #endif
 
-//#define DEBUG
+#ifdef ARDUINO_TRINKET_M0
+#include <Adafruit_DotStar.h>
+
+Adafruit_DotStar dotstar = Adafruit_DotStar(1, INTERNAL_DS_DATA, INTERNAL_DS_CLK, DOTSTAR_BGR);
+#define LEDS_PIN 2
+#else
 
 // Which pins your NeoPixels are connected to
-#define LEDS_PIN 2
+#define LEDS_PIN 4
+
+#endif
 
 // How many LEDS you have. 24 for xmas advent, 9 for menorah, etc.
 #define NUM_LEDS 24
 
 // Want one of them to be white?
-#define THE_WHITE_ONE 23
+#define THE_WHITE_ONE (NUM_LEDS - 1)
 
 // How many milliseconds between twinkling
 #define DELAY_MS 1000
@@ -56,6 +63,11 @@ void setup() {
   FastLED.setBrightness(64);
 
   pinMode(LED_BUILTIN, OUTPUT);
+
+#ifdef ARDUINO_TRINKET_M0
+  dotstar.begin();
+  dotstar.show();
+#endif
 
 #if defined(DEBUG)
   lastLightOn = NUM_LEDS - 1;
